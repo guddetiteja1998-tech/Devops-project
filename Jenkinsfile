@@ -27,7 +27,7 @@ EOF
                       
                 docker run -dt --name lms-db --network lms-network -e POSTGRES_PASSWORD=Login@123 postgres
                  sleep 20
-                 docker run -dt --name lms-be --network lms-network -p 8081:8080 ${BACKEND_IMAGE} '''
+                 docker run -dt --name lms-be --network lms-network -p 8080:8080 -e DATABASE_URL="postgresql://postgres:Login@123@lms-db:5432/postgres" -e MODE=dev -e PORT=8080 ${BACKEND_IMAGE} '''
                 
             }
         }
