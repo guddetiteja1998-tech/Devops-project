@@ -1,5 +1,5 @@
 
-ipeline {
+pipelinee {
     agent any
     environment{
         APP_DIR="/home/ubuntu/DEVOPS-PROJECT-MAIN"
