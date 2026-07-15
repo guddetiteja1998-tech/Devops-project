@@ -57,33 +57,24 @@ EOF
 
         stage('Push Backend Image') {
             steps {
-                sh '''
-                docker push ${BACKEND_IMAGE}
-                '''
+                sh 'docker push ${BACKEND_IMAGE}'
             }
         }
 
         stage('Push Frontend Image') {
             steps {
-                sh '''
-                docker push ${FRONTEND_IMAGE}
-                '''
-            }
-        }
-
-        stage('Update Kubernetes YAML') {
-            steps {
-                sh '''
-                sed -i "s|IMAGE_BACKEND|${BACKEND_IMAGE}|g" k8s/be-deploy.yaml
-                sed -i "s|IMAGE_FRONTEND|${FRONTEND_IMAGE}|g" k8s/fe-deploy.yaml
-                '''
+                sh 'docker push ${FRONTEND_IMAGE}'
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                kubectl apply -f k8s/
+                kubectl set image deployment/lms-be \
+                backend-container=${BACKEND_IMAGE}
+
+                kubectl set image deployment/lms-fe \
+                frontend-container=${FRONTEND_IMAGE}
                 '''
             }
         }
@@ -100,9 +91,9 @@ EOF
         stage('Verify Deployment') {
             steps {
                 sh '''
-                kubectl get pods
-                kubectl get svc
+                kubectl get pods -o wide
                 kubectl get deployments
+                kubectl get svc
                 '''
             }
         }
@@ -118,9 +109,7 @@ EOF
         }
 
         always {
-            sh '''
-            docker image prune -f
-            '''
+            sh 'docker image prune -f'
         }
     }
 }
