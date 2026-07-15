@@ -1,10 +1,12 @@
 
 pipeline {
     agent any
-    environment{
-        APP_DIR = "${WORKSPACE}"
-        BACKEND_IMAGE="tejaguddeti/lms-be"
-        FRONTEND_IMAGE="tejaguddeti/lms-fe"
+    environment {
+    APP_DIR = "${WORKSPACE}"
+      DOCKER_USERNAME = "tejaguddeti"
+      BACKEND_IMAGE = "tejaguddeti/lms-be:${BUILD_NUMBER}"
+      FRONTEND_IMAGE = "tejaguddeti/lms-fe:${BUILD_NUMBER}"
+}
     }
 
     stages {
@@ -19,31 +21,25 @@ EOF
                        docker build -t ${BACKEND_IMAGE} . '''
             }
         }
-        stage('Deploy Backend') {
+        stage('Docker Login') {
             steps {
-                sh ''' docker network create lms-network || true
-                       docker rm -f lms-db || true
-                       docker rm -f lms-be || true
-                      
-                docker run -dt --name lms-db --network lms-network -e POSTGRES_PASSWORD=Login@123 postgres
-                 sleep 20
-                 docker run -dt --name lms-be --network lms-network -p 8081:8080 -e DATABASE_URL="postgresql://postgres:Login@123@lms-db:5432/postgres" -e MODE=dev -e PORT=8080 ${BACKEND_IMAGE} '''
+            withCredentials([usernamePassword(
+              credentialsId: 'dockerhub',
+              usernameVariable: 'DOCKER_USER',
+              passwordVariable: 'DOCKER_PASS'
+        )]) {
+                sh ''' echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin '''
                 
             }
         }
-        stage('Build Frontend Image') {
+        stage('Push Backend Image') {
             steps {
-                sh ''' cd ${APP_DIR}/webapp
-                 cat > .env <<EOF 
-VITE_API_URL=http://3.26.199.100:8081/api
-EOF
-                    docker build -t ${FRONTEND_IMAGE} . '''
+                sh ''' docker push ${BACKEND_IMAGE} '''
             }
         }
-        stage('Deploy Frontend') {
+        stage('Push Frontend Image') {
             steps {
-                sh ''' docker rm -f lms-fe || true
-                docker run -dt  --name lms-fe --network lms-network -p 80:80 ${FRONTEND_IMAGE} '''
+                sh ''' docker push ${FRONTEND_IMAGE} '''
             }
         }
         stage('verify') {
